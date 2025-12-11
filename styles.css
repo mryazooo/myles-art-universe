@@ -130,6 +130,13 @@ body {
   padding: 0 0 3rem;
 }
 
+/* Make page headers align with sections */
+.page-header {
+  max-width: 1120px;
+  margin: 0 auto 2rem;
+  padding: 2.5rem 1.5rem 0;
+}
+
 /* Buttons */
 .btn {
   display: inline-block;
