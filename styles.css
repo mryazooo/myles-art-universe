@@ -206,7 +206,7 @@ body {
   color: #d0d3ff;
 }
 
-/* Comic-strip preview */
+/* Comic-strip preview (More from Myles) */
 .comic-strip-preview {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -218,6 +218,17 @@ body {
   aspect-ratio: 2 / 3;
   border-radius: 1rem;
   overflow: hidden;
+  background: #050711;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.strip-page img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;      /* keep panel feel, no giant blown-up slice */
+  display: block;
 }
 
 /* Two-column layout */
@@ -234,7 +245,21 @@ body {
   gap: 0.75rem;
 }
 
-/* Sketchbook grid */
+/* Sketch tiles used on the Home page collage */
+.sketch {
+  aspect-ratio: 4 / 3;
+  border-radius: 0.9rem;
+  overflow: hidden;
+}
+
+.sketch img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;      /* cropped but inside neat tiles, not taking over the page */
+  display: block;
+}
+
+/* Sketchbook grid (Sketchbook page) */
 .sketchbook-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -250,7 +275,7 @@ body {
 .sketch-card img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: contain;    /* show whole sketch here */
   background: #050711;
   display: block;
   padding: 0.35rem;
