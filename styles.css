@@ -28,13 +28,14 @@ body {
 }
 
 .logo {
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 1rem;
-  padding: 0.35rem 0.7rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+}
+
+.site-logo {
+  height: 40px;
+  width: auto;
+  display: block;
 }
 
 .main-nav {
@@ -68,7 +69,7 @@ body {
   font-size: 1.5rem;
 }
 
-/* Hero section */
+/* Hero, sections, etc. - you can merge this into your existing styles.css */
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
@@ -79,45 +80,10 @@ body {
   align-items: center;
 }
 
-.hero-text h1 {
-  font-size: clamp(2.4rem, 4vw, 3.4rem);
-  margin-bottom: 1rem;
-}
-
-.hero-text p {
-  max-width: 32rem;
-  color: #d1d5ff;
-  margin-bottom: 1.5rem;
-}
-
-.hero-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.hero-image {
-  justify-self: center;
-}
-
-.hero-art {
-  width: min(420px, 100%);
-  height: auto;
-  border-radius: 1.5rem;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
-}
-
-/* Sections */
 .section {
   padding: 2.5rem 1.5rem;
   max-width: 1120px;
   margin: 0 auto;
-}
-
-.section h2 {
-  font-size: 1.6rem;
-  margin-bottom: 1.5rem;
 }
 
 .section-alt {
@@ -126,48 +92,25 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Cards & grids */
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 3rem;
 }
 
-.card {
-  background: rgba(10, 12, 28, 0.95);
-  border-radius: 1.25rem;
-  padding: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+.page-header {
+  margin-bottom: 2rem;
 }
 
-.card-image {
-  border-radius: 1rem;
-  overflow: hidden;
-  max-height: 260px;
+.site-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1.25rem 1.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #a5a8cd;
+  margin-top: 2rem;
 }
 
-.card-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.card-body h3,
-.card-body h2 {
-  font-size: 1.1rem;
-  margin-bottom: 0.25rem;
-}
-
-.card-body p {
-  font-size: 0.95rem;
-  color: #d0d3ff;
-}
-
-/* Placeholders */
 .placeholder {
   border: 1px dashed rgba(255, 255, 255, 0.35);
   background: linear-gradient(135deg, rgba(43, 33, 68, 0.6), rgba(10, 12, 28, 0.9));
@@ -180,208 +123,11 @@ body {
   color: #cfd2ff;
 }
 
-/* Comic strip preview */
-.comic-strip-preview {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.strip-page {
-  aspect-ratio: 2 / 3;
-  border-radius: 1rem;
-  overflow: hidden;
-}
-
-.strip-page img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Two-column layout */
-.two-column {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 2rem;
-  align-items: center;
-}
-
-.sketch-preview-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.sketch {
-  aspect-ratio: 4 / 3;
-  border-radius: 0.9rem;
-  overflow: hidden;
-}
-
-.sketch img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.55rem 1.1rem;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  font-size: 0.95rem;
-  cursor: pointer;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.btn.primary {
-  background: linear-gradient(135deg, #ff4b9a, #ffb347);
-  color: #050711;
-  font-weight: 600;
-}
-
-.btn.secondary {
-  border-color: rgba(255, 255, 255, 0.35);
-  color: #f5f5f7;
-}
-
-.btn.link {
-  background: none;
-  border: none;
-  padding: 0;
-  color: #ff9ed3;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.center {
-  text-align: center;
-}
-
-/* Page headers */
-.page {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 2.5rem 1.5rem 3rem;
-}
-
-.page-header {
-  margin-bottom: 2rem;
-}
-
-.page-header h1 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
-
-.page-header p {
-  color: #d1d5ff;
-}
-
-/* Sketchbook */
-.sketchbook-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
-}
-
-.sketch-card {
-  aspect-ratio: 4 / 3;
-  border-radius: 1rem;
-  overflow: hidden;
-}
-
-.sketch-card img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* About */
-.about-section {
-  align-items: flex-start;
-}
-
-.about-text p + p {
-  margin-top: 0.75rem;
-}
-
-.about-image {
-  min-height: 220px;
-  border-radius: 1.25rem;
-}
-
-/* Contact */
-.contact-section {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr);
-  gap: 1rem;
-}
-
-.contact-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  max-width: 480px;
-}
-
-.contact-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  font-size: 0.95rem;
-}
-
-.contact-form input,
-.contact-form textarea {
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  padding: 0.5rem 0.75rem;
-  background: rgba(5, 7, 17, 0.9);
-  color: #f5f5f7;
-  font-family: inherit;
-}
-
-.contact-form input:focus,
-.contact-form textarea:focus {
-  outline: 2px solid #ff4b9a;
-  outline-offset: 1px;
-}
-
-.note {
-  font-size: 0.85rem;
-  color: #a4a8d8;
-  margin-top: 0.75rem;
-}
-
-/* Footer */
-.site-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 1.25rem 1.5rem;
-  text-align: center;
-  font-size: 0.85rem;
-  color: #a5a8cd;
-  margin-top: 2rem;
-}
-
 /* Responsive */
 @media (max-width: 768px) {
   .hero {
     grid-template-columns: minmax(0, 1fr);
     padding-top: 2rem;
-  }
-
-  .two-column {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .site-header {

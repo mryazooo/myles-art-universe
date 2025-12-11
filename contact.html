@@ -8,12 +8,14 @@
 </head>
 <body>
   <header class="site-header">
-    <div class="logo">MAU</div>
+    <div class="logo">
+      <img src="images/logo.png" alt="Myles' Art Universe logo" class="site-logo" />
+    </div>
     <nav class="main-nav">
-      <a href="index.html">Home</a>
-      <a href="characters.html">Gallery</a>
-      <a href="sketchbook.html">Sketchbook</a>
-      <a href="about.html">About</a>
+      <a href="index.html" class="">Home</a>
+      <a href="characters.html" class="">Gallery</a>
+      <a href="sketchbook.html" class="">Sketchbook</a>
+      <a href="about.html" class="">About</a>
       <a href="contact.html" class="active">Contact</a>
     </nav>
     <button class="nav-toggle" aria-label="Toggle navigation">
@@ -26,30 +28,7 @@
       <h1>Contact</h1>
       <p>If you'd like to send feedback or encouragement for Myles, use the form below.</p>
     </header>
-
-    <section class="section contact-section">
-      <form class="contact-form">
-        <label>
-          Name
-          <input type="text" name="name" placeholder="Your name" required />
-        </label>
-        <label>
-          Email
-          <input type="email" name="email" placeholder="you@example.com" required />
-        </label>
-        <label>
-          Message
-          <textarea name="message" rows="5" placeholder="Your message"></textarea>
-        </label>
-        <button type="submit" class="btn primary" disabled title="Static demo only">
-          Send message (static demo)
-        </button>
-      </form>
-      <p class="note">
-        Note: This is a static version of the site. To make the form send emails,
-        a simple backend service or form provider is needed. That can be added later.
-      </p>
-    </section>
+    <!-- existing contact content from your current site goes here -->
   </main>
 
   <footer class="site-footer">
