@@ -2,10 +2,14 @@
 """
 build_art_site.py
 
-- Reads curated images from NAS share (finished)
-- Copies them into the local repo images folder
-- Updates the Home page (index.html) hero + featured cards
-  based on NAS 'finished' images and sidecar .txt captions.
+- Reads curated images from NAS share (finished + sketchbook)
+- Copies them into the local repo images folders
+- Updates:
+    * Home page (index.html) hero + featured cards (from finished)
+    * Home page sketch preview (latest sketches)
+    * Gallery page (characters.html) full finished gallery
+    * Sketchbook page (sketchbook.html) full sketchbook gallery
+based on NAS images and sidecar .txt captions.
 """
 
 import shutil
@@ -18,25 +22,40 @@ from typing import List, Tuple
 # --------------------
 
 # NAS source folders (adjust IP/hostname as needed)
-NAS_FINISHED_DIR = r"\\192.168.2.132\art-site\finished"   # <-- update to match your NAS
-NAS_SKETCHBOOK_DIR = r"\\192.168.2.132\art-site\sketchbook"  # not used yet, but left for future
+NAS_FINISHED_DIR = r"\\192.168.2.132\art-site\finished"
+NAS_SKETCHBOOK_DIR = r"\\192.168.2.132\art-site\sketchbook"
 
 # Local repo folders where images are stored
 REPO_ROOT = Path(__file__).resolve().parent
 LOCAL_FINISHED_DIR = REPO_ROOT / "images" / "finished"
-LOCAL_SKETCHBOOK_DIR = REPO_ROOT / "images" / "sketchbook"  # for future
+LOCAL_SKETCHBOOK_DIR = REPO_ROOT / "images" / "sketchbook"
 
-# HTML file to update (home page)
-HTML_FILE = REPO_ROOT / "index.html"
-HTML_BACKUP_FILE = REPO_ROOT / "index.backup.html"
+# HTML files to update
+HOME_HTML_FILE = REPO_ROOT / "index.html"
+HOME_HTML_BACKUP_FILE = REPO_ROOT / "index.backup.html"
 
-# Markers in the HTML file
-MARKERS = {
+GALLERY_HTML_FILE = REPO_ROOT / "characters.html"
+GALLERY_HTML_BACKUP_FILE = REPO_ROOT / "characters.backup.html"
+
+SKETCHBOOK_HTML_FILE = REPO_ROOT / "sketchbook.html"
+SKETCHBOOK_HTML_BACKUP_FILE = REPO_ROOT / "sketchbook.backup.html"
+
+# Markers in the HTML files
+MARKERS_HOME = {
     "hero": ("<!-- START HERO -->", "<!-- END HERO -->"),
     "featured": ("<!-- START FEATURED -->", "<!-- END FEATURED -->"),
+    "sketch_preview": ("<!-- START HOME_SKETCHES -->", "<!-- END HOME_SKETCHES -->"),
 }
 
-# How many featured images to show (after hero)
+MARKERS_GALLERY = {
+    "gallery_finished": ("<!-- START GALLERY_FINISHED -->", "<!-- END GALLERY_FINISHED -->"),
+}
+
+MARKERS_SKETCHBOOK = {
+    "gallery_sketchbook": ("<!-- START GALLERY_SKETCHBOOK -->", "<!-- END GALLERY_SKETCHBOOK -->"),
+}
+
+# How many featured images to show on the home page (after hero)
 NUM_FEATURED = 3
 
 # File extensions considered as images
@@ -67,7 +86,6 @@ def list_images_with_captions(folder: Path) -> List[Tuple[Path, str]]:
                     caption = ""
             images.append((entry, caption))
 
-    # Newest first
     images.sort(key=lambda t: t[0].stat().st_mtime, reverse=True)
     return images
 
@@ -80,12 +98,14 @@ def copy_images(src_items: List[Tuple[Path, str]], dest_folder: Path) -> List[Tu
     """
     Copies images to dest_folder.
     Returns list of (file_name, caption) relative to dest_folder.
+    Keeps order the same as src_items (which is already newest-first).
     """
     ensure_dir(dest_folder)
-    # clear existing finished images so it stays in sync
+    # clear existing images so it stays in sync
     for f in dest_folder.glob("*"):
         if f.is_file():
             f.unlink()
+
     result = []
     for src_path, caption in src_items:
         dest_path = dest_folder / src_path.name
@@ -95,7 +115,7 @@ def copy_images(src_items: List[Tuple[Path, str]], dest_folder: Path) -> List[Tu
 
 
 def escape_html(text: str) -> str:
-    """Very small HTML escape helper for captions/titles."""
+    """Minimal HTML escaping for captions/titles."""
     return (
         text.replace("&", "&amp;")
             .replace("<", "&lt;")
@@ -103,18 +123,40 @@ def escape_html(text: str) -> str:
     )
 
 
+def _derive_title_and_body(file_name: str, caption: str) -> Tuple[str, str]:
+    """
+    Helper to derive a nice title + body from filename + caption.
+    - Title = first part of caption (split on '—') or filename-based
+    - Body  = full caption, or fallback sentence
+    """
+    if caption:
+        raw_title = caption.split("—")[0].strip()
+        if raw_title:
+            title = raw_title
+        else:
+            stem = Path(file_name).stem.replace("_", " ")
+            title = stem.title()
+        body = caption
+    else:
+        stem = Path(file_name).stem.replace("_", " ")
+        title = stem.title()
+        body = "New artwork from Myles."
+
+    return escape_html(title), escape_html(body)
+
+
 def build_hero_html(file_name: str, caption: str) -> str:
     """
-    Builds the hero-image block.
-    - Uses caption as alt text if available.
-    - Falls back to a cleaned version of the filename.
+    Builds the hero-image block for index.html.
+    Uses caption as alt text if available; otherwise falls back to filename-based title.
     """
     img_src = f"images/finished/{file_name}"
 
     if caption:
         alt = escape_html(caption)
     else:
-        alt = Path(file_name).stem.replace("_", " ").title()
+        stem = Path(file_name).stem.replace("_", " ")
+        alt = stem.title()
 
     return (
         '<div class="hero-image">\n'
@@ -125,9 +167,8 @@ def build_hero_html(file_name: str, caption: str) -> str:
 
 def build_featured_html(items: List[Tuple[str, str]]) -> str:
     """
-    Builds the Featured Pieces card grid.
-    Uses caption as the title if available,
-    otherwise uses a cleaned filename.
+    Builds the Featured Pieces card grid for the home page.
+    Uses caption as the title where possible.
     """
     if not items:
         return '<div class="card-grid"></div>'
@@ -135,18 +176,7 @@ def build_featured_html(items: List[Tuple[str, str]]) -> str:
     cards = []
     for file_name, caption in items:
         img_src = f"images/finished/{file_name}"
-
-        if caption:
-            title = caption.split("—")[0].strip().title()  # First part of caption
-            body = caption
-        else:
-            # fallback to filename-derived title
-            stem = Path(file_name).stem.replace("_", " ")
-            title = stem.title()
-            body = "New featured artwork from Myles."
-
-        title = escape_html(title)
-        body = escape_html(body)
+        title, body = _derive_title_and_body(file_name, caption)
 
         card = (
             '  <article class="card">\n'
@@ -162,6 +192,62 @@ def build_featured_html(items: List[Tuple[str, str]]) -> str:
         cards.append(card)
 
     return "<div class=\"card-grid\">\n" + "\n\n".join(cards) + "\n</div>"
+
+
+def build_gallery_html(items: List[Tuple[str, str]], subfolder: str) -> str:
+    """
+    Builds a full gallery grid (.card layout) for either finished or sketchbook.
+    subfolder is "finished" or "sketchbook" to build the correct image src paths.
+    """
+    if not items:
+        return '<div class="card-grid gallery-grid"></div>'
+
+    cards = []
+    for file_name, caption in items:
+        img_src = f"images/{subfolder}/{file_name}"
+        title, body = _derive_title_and_body(file_name, caption)
+
+        card = (
+            '  <article class="card gallery-card">\n'
+            '    <div class="card-image">\n'
+            f'      <img src="{img_src}" alt="{title}" />\n'
+            '    </div>\n'
+            '    <div class="card-body">\n'
+            f'      <h3>{title}</h3>\n'
+            f'      <p>{body}</p>\n'
+            '    </div>\n'
+            '  </article>'
+        )
+        cards.append(card)
+
+    return "<div class=\"card-grid gallery-grid\">\n" + "\n\n".join(cards) + "\n</div>"
+
+
+def build_home_sketches_html(items: List[Tuple[str, str]]) -> str:
+    """
+    Builds the small 2x2 sketch preview grid for the home page.
+    - Uses up to 4 latest sketches with images.
+    - Fills remaining slots (to 4) with 'Future sketch' placeholders.
+    """
+    cells = []
+    max_sketches = 4
+    used = items[:max_sketches]
+
+    for file_name, caption in used:
+        img_src = f"images/sketchbook/{file_name}"
+        title, _ = _derive_title_and_body(file_name, caption)
+        cell = (
+            '  <div class="sketch">\n'
+            f'    <img src="{img_src}" alt="{title}" />\n'
+            '  </div>'
+        )
+        cells.append(cell)
+
+    # Fill remaining cells up to 4 with placeholders (only if you have < 4 sketches)
+    while len(cells) < 4:
+        cells.append('  <div class="sketch placeholder"><span>Future sketch</span></div>')
+
+    return "<div class=\"sketch-preview-grid\">\n" + "\n".join(cells) + "\n</div>"
 
 
 def replace_section(html: str, start_marker: str, end_marker: str, new_content: str) -> str:
@@ -184,6 +270,7 @@ def replace_section(html: str, start_marker: str, end_marker: str, new_content: 
 # --------------------
 
 def main():
+    # ----- FINISHED -----
     nas_finished = Path(NAS_FINISHED_DIR)
     if not nas_finished.exists():
         raise SystemExit(f"NAS finished folder does not exist: {nas_finished}")
@@ -192,32 +279,84 @@ def main():
     if not finished_items:
         print("Warning: no images found in finished folder.")
 
-    # Copy images into local repo
     copied_finished = copy_images(finished_items, LOCAL_FINISHED_DIR)
     print(f"Copied {len(copied_finished)} finished images to {LOCAL_FINISHED_DIR}")
 
-    if not HTML_FILE.exists():
-        raise SystemExit(f"HTML file not found: {HTML_FILE}")
-
-    # Decide hero + featured
+    # hero + featured (newest-first behaviour)
     hero = copied_finished[0] if copied_finished else None
     featured = copied_finished[1:1 + NUM_FEATURED] if len(copied_finished) > 1 else []
 
     hero_html = build_hero_html(hero[0], hero[1]) if hero else '<div class="hero-image"></div>'
     featured_html = build_featured_html(featured)
+    gallery_finished_html = build_gallery_html(copied_finished, "finished")
 
-    # Read HTML
-    original_html = HTML_FILE.read_text(encoding="utf-8")
-    HTML_BACKUP_FILE.write_text(original_html, encoding="utf-8")
-    print(f"Backup created: {HTML_BACKUP_FILE}")
+    # ----- SKETCHBOOK -----
+    nas_sketchbook = Path(NAS_SKETCHBOOK_DIR)
+    sketchbook_items: List[Tuple[Path, str]] = []
+    copied_sketchbook: List[Tuple[str, str]] = []
 
-    # Replace sections
-    new_html = original_html
-    new_html = replace_section(new_html, *MARKERS["hero"], hero_html)
-    new_html = replace_section(new_html, *MARKERS["featured"], featured_html)
+    if nas_sketchbook.exists():
+        sketchbook_items = list_images_with_captions(nas_sketchbook)
+        copied_sketchbook = copy_images(sketchbook_items, LOCAL_SKETCHBOOK_DIR)
+        print(f"Copied {len(copied_sketchbook)} sketchbook images to {LOCAL_SKETCHBOOK_DIR}")
+    else:
+        print(f"Sketchbook folder does not exist on NAS: {nas_sketchbook}")
 
-    HTML_FILE.write_text(new_html, encoding="utf-8")
-    print(f"Updated HTML written to: {HTML_FILE}")
+    gallery_sketchbook_html = build_gallery_html(copied_sketchbook, "sketchbook")
+    home_sketches_html = build_home_sketches_html(copied_sketchbook)
+
+    # --------------------
+    # Update HOME page
+    # --------------------
+    if not HOME_HTML_FILE.exists():
+        raise SystemExit(f"Home HTML file not found: {HOME_HTML_FILE}")
+
+    original_home = HOME_HTML_FILE.read_text(encoding="utf-8")
+    HOME_HTML_BACKUP_FILE.write_text(original_home, encoding="utf-8")
+    print(f"Home backup created: {HOME_HTML_BACKUP_FILE}")
+
+    new_home = original_home
+    new_home = replace_section(new_home, *MARKERS_HOME["hero"], hero_html)
+    new_home = replace_section(new_home, *MARKERS_HOME["featured"], featured_html)
+    new_home = replace_section(new_home, *MARKERS_HOME["sketch_preview"], home_sketches_html)
+    HOME_HTML_FILE.write_text(new_home, encoding="utf-8")
+    print(f"Updated home HTML written to: {HOME_HTML_FILE}")
+
+    # --------------------
+    # Update GALLERY page
+    # --------------------
+    if GALLERY_HTML_FILE.exists():
+        original_gallery = GALLERY_HTML_FILE.read_text(encoding="utf-8")
+        GALLERY_HTML_BACKUP_FILE.write_text(original_gallery, encoding="utf-8")
+        print(f"Gallery backup created: {GALLERY_HTML_BACKUP_FILE}")
+
+        new_gallery = replace_section(
+            original_gallery,
+            *MARKERS_GALLERY["gallery_finished"],
+            gallery_finished_html,
+        )
+        GALLERY_HTML_FILE.write_text(new_gallery, encoding="utf-8")
+        print(f"Updated gallery HTML written to: {GALLERY_HTML_FILE}")
+    else:
+        print(f"Warning: Gallery HTML file not found: {GALLERY_HTML_FILE}")
+
+    # --------------------
+    # Update SKETCHBOOK page
+    # --------------------
+    if SKETCHBOOK_HTML_FILE.exists():
+        original_sketchbook = SKETCHBOOK_HTML_FILE.read_text(encoding="utf-8")
+        SKETCHBOOK_HTML_BACKUP_FILE.write_text(original_sketchbook, encoding="utf-8")
+        print(f"Sketchbook backup created: {SKETCHBOOK_HTML_BACKUP_FILE}")
+
+        new_sketchbook = replace_section(
+            original_sketchbook,
+            *MARKERS_SKETCHBOOK["gallery_sketchbook"],
+            gallery_sketchbook_html,
+        )
+        SKETCHBOOK_HTML_FILE.write_text(new_sketchbook, encoding="utf-8")
+        print(f"Updated sketchbook HTML written to: {SKETCHBOOK_HTML_FILE}")
+    else:
+        print(f"Warning: Sketchbook HTML file not found: {SKETCHBOOK_HTML_FILE}")
 
 
 if __name__ == "__main__":
