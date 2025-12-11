@@ -326,9 +326,11 @@ body {
   margin-top: 0.75rem;
 }
 
-.about-image {
-  min-height: 220px;
-  border-radius: 1.25rem;
+.about-image img {
+  max-width: 250px;
+  border-radius: 50%;
+  display: block;
+  margin: 0 auto;
 }
 
 /* Contact */
