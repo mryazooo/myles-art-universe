@@ -28,6 +28,7 @@ except ImportError:
         "Run: pip install openai"
     )
 
+
 # --------------------
 # CONFIGURATION
 # --------------------

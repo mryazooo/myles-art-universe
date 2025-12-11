@@ -9,11 +9,12 @@ build_art_site.py
     * Home page sketch preview (latest sketches)
     * Gallery page (characters.html) full finished gallery
     * Sketchbook page (sketchbook.html) full sketchbook gallery
-based on NAS images and sidecar .txt captions.
+based on NAS images and sidecar .txt captions + .json metadata.
 """
 
 import shutil
 import re
+import json
 from pathlib import Path
 from typing import List, Tuple
 
@@ -120,6 +121,7 @@ def escape_html(text: str) -> str:
         text.replace("&", "&amp;")
             .replace("<", "&lt;")
             .replace(">", "&gt;")
+            .replace('"', "&quot;")
     )
 
 
@@ -145,10 +147,93 @@ def _derive_title_and_body(file_name: str, caption: str) -> Tuple[str, str]:
     return escape_html(title), escape_html(body)
 
 
+# ---------- METADATA HELPERS (JSON from NAS) ----------
+
+def _get_nas_folder_for_kind(kind: str) -> Path:
+    if kind == "sketchbook":
+        return Path(NAS_SKETCHBOOK_DIR)
+    return Path(NAS_FINISHED_DIR)
+
+
+def get_metadata_for_image(file_name: str, kind: str) -> dict:
+    """
+    Load JSON metadata for an image from the NAS if available.
+
+    Returns a dict with at least:
+      { "slug": str, "tags": List[str], "characters": List[str], "kind": str }
+
+    Falls back gracefully if JSON is missing or malformed.
+    """
+    nas_folder = _get_nas_folder_for_kind(kind)
+    json_path = nas_folder / (Path(file_name).stem + ".json")
+
+    meta = {
+        "slug": "",
+        "tags": [],
+        "characters": [],
+        "kind": kind,
+    }
+
+    if not json_path.exists():
+        return meta
+
+    try:
+        data = json.loads(json_path.read_text(encoding="utf-8"))
+    except Exception:
+        return meta
+
+    # Normalise fields
+    slug = str(data.get("slug") or "").strip()
+    tags = data.get("tags") or []
+    characters = data.get("characters") or []
+    kind_val = str(data.get("kind") or kind).strip() or kind
+
+    # Clean lists
+    clean_tags = [str(t).strip() for t in tags if str(t).strip()]
+    clean_chars = [str(c).strip() for c in characters if str(c).strip()]
+
+    meta["slug"] = slug
+    meta["tags"] = clean_tags
+    meta["characters"] = clean_chars
+    meta["kind"] = kind_val
+
+    return meta
+
+
+def build_data_attributes(meta: dict) -> str:
+    """
+    Build a string of data-* attributes from metadata, e.g.
+      data-slug="leonardo-action-pose"
+      data-kind="finished"
+      data-tags="comic art,fan art"
+      data-characters="Leonardo"
+    """
+    parts = []
+
+    if meta.get("slug"):
+        parts.append(f' data-slug="{escape_html(meta["slug"])}"')
+
+    if meta.get("kind"):
+        parts.append(f' data-kind="{escape_html(meta["kind"])}"')
+
+    if meta.get("tags"):
+        tags_val = ",".join(meta["tags"])
+        parts.append(f' data-tags="{escape_html(tags_val)}"')
+
+    if meta.get("characters"):
+        chars_val = ",".join(meta["characters"])
+        parts.append(f' data-characters="{escape_html(chars_val)}"')
+
+    return "".join(parts)
+
+
+# ---------- HTML BUILDERS ----------
+
 def build_hero_html(file_name: str, caption: str) -> str:
     """
     Builds the hero-image block for index.html.
     Uses caption as alt text if available; otherwise falls back to filename-based title.
+    Attaches JSON metadata as data-* attributes on the <img>.
     """
     img_src = f"images/finished/{file_name}"
 
@@ -158,9 +243,12 @@ def build_hero_html(file_name: str, caption: str) -> str:
         stem = Path(file_name).stem.replace("_", " ")
         alt = stem.title()
 
+    meta = get_metadata_for_image(file_name, kind="finished")
+    data_attrs = build_data_attributes(meta)
+
     return (
         '<div class="hero-image">\n'
-        f'  <img src="{img_src}" alt="{alt}" class="hero-art" />\n'
+        f'  <img src="{img_src}" alt="{alt}" class="hero-art"{data_attrs} />\n'
         '</div>'
     )
 
@@ -169,6 +257,7 @@ def build_featured_html(items: List[Tuple[str, str]]) -> str:
     """
     Builds the Featured Pieces card grid for the home page.
     Uses caption as the title where possible.
+    Attaches JSON metadata as data-* attributes on each <article>.
     """
     if not items:
         return '<div class="card-grid"></div>'
@@ -178,8 +267,11 @@ def build_featured_html(items: List[Tuple[str, str]]) -> str:
         img_src = f"images/finished/{file_name}"
         title, body = _derive_title_and_body(file_name, caption)
 
+        meta = get_metadata_for_image(file_name, kind="finished")
+        data_attrs = build_data_attributes(meta)
+
         card = (
-            '  <article class="card">\n'
+            f'  <article class="card"{data_attrs}>\n'
             '    <div class="card-image">\n'
             f'      <img src="{img_src}" alt="{title}" />\n'
             '    </div>\n'
@@ -198,17 +290,22 @@ def build_gallery_html(items: List[Tuple[str, str]], subfolder: str) -> str:
     """
     Builds a full gallery grid (.card layout) for either finished or sketchbook.
     subfolder is "finished" or "sketchbook" to build the correct image src paths.
+    Attaches JSON metadata as data-* attributes on each <article>.
     """
     if not items:
         return '<div class="card-grid gallery-grid"></div>'
 
+    kind = subfolder  # "finished" or "sketchbook"
     cards = []
     for file_name, caption in items:
         img_src = f"images/{subfolder}/{file_name}"
         title, body = _derive_title_and_body(file_name, caption)
 
+        meta = get_metadata_for_image(file_name, kind=kind)
+        data_attrs = build_data_attributes(meta)
+
         card = (
-            '  <article class="card gallery-card">\n'
+            f'  <article class="card gallery-card"{data_attrs}>\n'
             '    <div class="card-image">\n'
             f'      <img src="{img_src}" alt="{title}" />\n'
             '    </div>\n'
@@ -228,6 +325,7 @@ def build_home_sketches_html(items: List[Tuple[str, str]]) -> str:
     Builds the small 2x2 sketch preview grid for the home page.
     - Uses up to 4 latest sketches with images.
     - Fills remaining slots (to 4) with 'Future sketch' placeholders.
+    Attaches JSON metadata as data-* attributes on each sketch <div>.
     """
     cells = []
     max_sketches = 4
@@ -236,8 +334,12 @@ def build_home_sketches_html(items: List[Tuple[str, str]]) -> str:
     for file_name, caption in used:
         img_src = f"images/sketchbook/{file_name}"
         title, _ = _derive_title_and_body(file_name, caption)
+
+        meta = get_metadata_for_image(file_name, kind="sketchbook")
+        data_attrs = build_data_attributes(meta)
+
         cell = (
-            '  <div class="sketch">\n'
+            f'  <div class="sketch"{data_attrs}>\n'
             f'    <img src="{img_src}" alt="{title}" />\n'
             '  </div>'
         )
